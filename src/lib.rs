@@ -84,6 +84,7 @@ mod error;
 mod liquid_json;
 #[cfg(feature = "serde")]
 mod liquid_json_value;
+
 pub use error::Error;
 use liquid::ValueView;
 #[cfg(feature = "serde")]
@@ -93,21 +94,35 @@ use serde_json::Number;
 
 pub use crate::liquid_json::LiquidJson;
 
-fn to_liquid_obj(value: serde_json::Value) -> Result<liquid::Object, Error> {
+/// Utility function to render a basic string with a [serde_json::Value] instead of dealing with [liquid::Object].
+pub fn render_string(template: &str, data: &serde_json::Value) -> Result<String, Error> {
+    let template = liquid::ParserBuilder::with_stdlib()
+        .build()?
+        .parse(template)?;
+    let data = to_liquid_obj(data)?;
+    Ok(template.render(&data)?)
+}
+
+fn to_liquid_obj(value: &serde_json::Value) -> Result<liquid::Object, Error> {
     // let mut obj = liquid::Object::new();
     match value {
         serde_json::Value::Object(v) => v
             .into_iter()
-            .map(|(k, v)| Ok((liquid::model::KString::from_string(k), to_liquid_value(v))))
+            .map(|(k, v)| {
+                Ok((
+                    liquid::model::KString::from_string(k.clone()),
+                    to_liquid_value(v),
+                ))
+            })
             .collect::<Result<liquid::Object, Error>>(),
-        _ => Err(Error::InvalidContext(value)),
+        _ => Err(Error::InvalidContext(value.clone())),
     }
 }
 
-fn to_liquid_value(value: serde_json::Value) -> liquid::model::Value {
+fn to_liquid_value(value: &serde_json::Value) -> liquid::model::Value {
     match value {
         serde_json::Value::Null => liquid::model::Value::Nil,
-        serde_json::Value::Bool(v) => liquid::model::Value::Scalar(liquid::model::Scalar::from(v)),
+        serde_json::Value::Bool(v) => liquid::model::Value::Scalar(liquid::model::Scalar::from(*v)),
         serde_json::Value::Number(v) => {
             if v.is_f64() {
                 liquid::model::Value::Scalar(liquid::model::Scalar::from(v.as_f64().unwrap()))
@@ -116,14 +131,19 @@ fn to_liquid_value(value: serde_json::Value) -> liquid::model::Value {
             }
         }
         serde_json::Value::String(v) => {
-            liquid::model::Value::Scalar(liquid::model::Scalar::from(v))
+            liquid::model::Value::Scalar(liquid::model::Scalar::from(v.clone()))
         }
         serde_json::Value::Array(v) => {
-            liquid::model::Value::Array(v.into_iter().map(to_liquid_value).collect())
+            liquid::model::Value::Array(v.iter().map(to_liquid_value).collect())
         }
         serde_json::Value::Object(v) => liquid::model::Value::Object(
             v.into_iter()
-                .map(|(k, v)| (liquid::model::KString::from_string(k), to_liquid_value(v)))
+                .map(|(k, v)| {
+                    (
+                        liquid::model::KString::from_string(k.clone()),
+                        to_liquid_value(v),
+                    )
+                })
                 .collect(),
         ),
     }

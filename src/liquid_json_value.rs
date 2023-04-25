@@ -4,14 +4,25 @@ use crate::{liquid_json::LiquidJson, Error};
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 /// A Liquid JSON value that implements Serialize/Deserialize.
+#[must_use]
 pub struct LiquidJsonValue(
     #[serde(serialize_with = "ser_with", deserialize_with = "deser_with")] LiquidJson,
 );
 
 impl LiquidJsonValue {
+    /// Create a new Liquid JSON value from a JSON value.
+    pub fn new(raw_template: serde_json::Value) -> Self {
+        LiquidJsonValue(LiquidJson::new(raw_template))
+    }
     /// Render the JSON template with the given data.
-    pub fn render(&self, data: serde_json::Value) -> Result<serde_json::Value, Error> {
+    pub fn render(&self, data: &serde_json::Value) -> Result<serde_json::Value, Error> {
         self.0.render(data)
+    }
+}
+
+impl From<serde_json::Value> for LiquidJsonValue {
+    fn from(value: serde_json::Value) -> Self {
+        LiquidJsonValue::new(value)
     }
 }
 
@@ -49,7 +60,7 @@ mod tests {
     #[case(json!({"inner_liquid":{"key":"{{myval}}"}}), json!({"myval": {"deeper":10}}), json!({"key":{"deeper":10}}))]
     fn serde(#[case] from_json: Value, #[case] data: Value, #[case] expected: Value) -> Result<()> {
         let deser: TestSerde = serde_json::from_value(from_json.clone())?;
-        let actual = deser.inner_liquid.render(data)?;
+        let actual = deser.inner_liquid.render(&data)?;
         assert_eq!(actual, expected);
         let to_json = serde_json::to_value(deser)?;
         assert_eq!(to_json, from_json);

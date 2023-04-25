@@ -33,7 +33,7 @@ impl LiquidJson {
     }
 
     /// Render the Liquid JSON template with the given data.
-    pub fn render(&self, data: serde_json::Value) -> Result<serde_json::Value, Error> {
+    pub fn render(&self, data: &serde_json::Value) -> Result<serde_json::Value, Error> {
         let data = to_liquid_obj(data)?;
         render_value(&self.parser, &self.raw_template, &data)
     }
@@ -54,7 +54,7 @@ mod tests {
     #[case(json!({"this":"{{myval}}"}), json!({"myval": [5.1,4.2]}), json!({"this":[5.1,4.2]}))]
     fn basic(#[case] template: Value, #[case] data: Value, #[case] expected: Value) -> Result<()> {
         let tmpl = LiquidJson::new(template);
-        let actual = tmpl.render(data)?;
+        let actual = tmpl.render(&data)?;
         assert_eq!(actual, expected);
         Ok(())
     }
