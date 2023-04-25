@@ -50,6 +50,7 @@ mod tests {
     #[case(json!({"this":"{{myval}}"}), json!({"myval": 5}), json!({"this":5}))]
     #[case(json!({"this":"{{myval}}"}), json!({"myval": "5"}), json!({"this":"5"}))]
     #[case(json!({"this":"{{myval}}"}), json!({"myval": 5.1}), json!({"this":5.1}))]
+    #[case(json!({"this":"{{myval}}"}), json!({"myval": [5.1,4.2]}), json!({"this":[5.1,4.2]}))]
     fn basic(#[case] template: Value, #[case] data: Value, #[case] expected: Value) -> Result<()> {
         let tmpl = LiquidJson::new(template);
         let actual = tmpl.render(data)?;
