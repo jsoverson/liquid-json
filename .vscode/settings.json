@@ -1,0 +1,16 @@
+{
+  "git.ignoreLimitWarning": true,
+
+  "rust-analyzer.cargo.features": ["serde"],
+  "rust-analyzer.rustfmt.overrideCommand": [
+    "rustup",
+    "run",
+    "nightly",
+    "--",
+    "rustfmt",
+    "--edition",
+    "2021",
+    "--"
+  ],
+  "rust-analyzer.showUnlinkedFileNotification": false
+}
