@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{liquid_json::LiquidJson, Error};
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, PartialEq)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, PartialEq)]
 /// A Liquid JSON value that implements Serialize/Deserialize.
 pub struct LiquidJsonValue(
     #[serde(serialize_with = "ser_with", deserialize_with = "deser_with")] LiquidJson,

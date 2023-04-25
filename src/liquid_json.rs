@@ -2,6 +2,7 @@ use crate::{render_value, to_liquid_obj, Error};
 
 /// A JSON structured Liquid template.
 #[must_use]
+#[derive(Clone)]
 pub struct LiquidJson {
     pub(crate) raw_template: serde_json::Value,
     parser: liquid::Parser,
