@@ -81,12 +81,20 @@
 #![allow(clippy::derive_partial_eq_without_eq, clippy::box_default)]
 
 mod error;
+mod filters;
 mod liquid_json;
 #[cfg(feature = "serde")]
 mod liquid_json_value;
+mod options;
+
+use std::sync::Arc;
 
 pub use error::Error;
-use liquid::ValueView;
+use liquid::{Parser, ValueView};
+use liquid_core::{
+    runtime::{RuntimeBuilder, Variable},
+    Language, Runtime,
+};
 #[cfg(feature = "serde")]
 pub use liquid_json_value::LiquidJsonValue;
 use once_cell::sync::Lazy;
@@ -94,11 +102,30 @@ use serde_json::Number;
 
 pub use crate::liquid_json::LiquidJson;
 
+use self::options::OptionsBuilder;
+
+static PARSER: Lazy<Arc<Parser>> = Lazy::new(|| {
+    let builder = liquid::ParserBuilder::with_stdlib()
+        .filter(filters::Each::new())
+        .filter(filters::Output);
+    #[cfg(feature = "serde")]
+    let builder = builder.filter(filters::Json);
+    Arc::new(builder.build().unwrap())
+});
+
+static OPTIONS: Lazy<Arc<Language>> = Lazy::new(|| {
+    let builder = OptionsBuilder::new()
+        .stdlib()
+        .filter(filters::Each::new())
+        .filter(filters::Output);
+    #[cfg(feature = "serde")]
+    let builder = builder.filter(filters::Json);
+    builder.build()
+});
+
 /// Utility function to render a basic string with a [serde_json::Value] instead of dealing with [liquid::Object].
 pub fn render_string(template: &str, data: &serde_json::Value) -> Result<String, Error> {
-    let template = liquid::ParserBuilder::with_stdlib()
-        .build()?
-        .parse(template)?;
+    let template = PARSER.parse(template)?;
     let data = to_liquid_obj(data)?;
     Ok(template.render(&data)?)
 }
@@ -178,10 +205,9 @@ fn to_json_value(value: liquid::model::Value) -> serde_json::Value {
 }
 
 static SINGLE_VALUE: Lazy<regex::Regex> =
-    Lazy::new(|| regex::Regex::new(r"^\{\{(\w*)\}\}$").unwrap());
+    Lazy::new(|| regex::Regex::new(r"^\{\{\s*(\w*)\s*\}\}$").unwrap());
 
 fn render_value(
-    parser: &liquid::Parser,
     value: &serde_json::Value,
     data: &liquid::Object,
 ) -> Result<serde_json::Value, Error> {
@@ -194,19 +220,31 @@ fn render_value(
                     return Ok(to_json_value(val.clone()));
                 }
             }
-            let template = parser.parse(s)?;
-            let output = template.render(data)?;
+            let mut output = Vec::new();
+            let runtime = RuntimeBuilder::new().set_globals(data).build();
+
+            let elements = liquid_core::parser::parse(s, &OPTIONS)?;
+            for element in elements {
+                element.render_to(&mut output, &runtime)?;
+            }
+            let sentinel = Variable::with_literal("__output__");
+            if let Some(output) = sentinel.try_evaluate(&runtime) {
+                if let Some(value) = runtime.try_get(&output) {
+                    return Ok(to_json_value(value.to_value()));
+                }
+            }
+            let output = String::from_utf8(output).unwrap();
             Ok(serde_json::Value::String(output))
         }
         serde_json::Value::Array(a) => Ok(serde_json::Value::Array(
             a.iter()
-                .map(|v| render_value(parser, v, data))
+                .map(|v| render_value(v, data))
                 .collect::<Result<Vec<serde_json::Value>, _>>()?,
         )),
         serde_json::Value::Object(o) => {
             let map = o
                 .into_iter()
-                .map(|(k, v)| Ok((k.clone(), render_value(parser, v, data)?)))
+                .map(|(k, v)| Ok((k.clone(), render_value(v, data)?)))
                 .collect::<Result<serde_json::Map<String, serde_json::Value>, Error>>()?;
             Ok(serde_json::Value::Object(map))
         }

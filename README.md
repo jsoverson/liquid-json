@@ -19,7 +19,7 @@ assert_eq!(actual, expected);
 
 ## Features
 
-Turn on the `serde` feature to expose `LiquidJsonValue`. `LiquidJsonValue` is a wrapper around `LiquidJson` (and `serde_json::Value`) that lets you embed `LiquidJson` templates in your structs, e.g.
+The `serde` feature (enabled by default) exposes `LiquidJsonValue`. `LiquidJsonValue` is a wrapper around `LiquidJson` (and `serde_json::Value`) that lets you embed `LiquidJson` templates in your structs, e.g.
 
 ```rust
 use serde_json::json;
@@ -35,4 +35,47 @@ let template_data = json!({"myval": 5});
 let yours: YourStruct = serde_json::from_value(json_data).unwrap();
 let actual = yours.inner_liquid.render(&template_data).unwrap();
 
+```
+
+## Additional Filters
+
+This library extends the default Liquid filters with the following:
+
+- `json`: parses a JSON string into a Liquid object (recursing through arrays/objects as necessary).
+- `each`: apply a template over every element in an array.
+- `output`: mark a Liquid value as the output value of the template. Useful when you want to return an array or an object instead of a string.
+
+### Example
+
+Those filters can combine to produce complex JSON structures from simple input data. E.g.:
+
+The input data:
+
+```json
+{
+  "to": ["john@example.com", "jane@example.com"]
+}
+```
+
+Applied to the liquid JSON template:
+
+```json
+{
+  "recipients" : "{{ to | each: '{ \"email\": \"{{ el }}\" }' | json | output }}"
+}
+```
+
+Produces the JSON:
+
+```json
+{
+  "recipients": [
+    {
+      "email": "john@example.com"
+    },
+    {
+      "email": "jane@example.com"
+    }
+  ]
+}
 ```
