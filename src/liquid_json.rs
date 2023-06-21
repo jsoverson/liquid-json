@@ -32,6 +32,11 @@ impl LiquidJson {
         let data = to_liquid_obj(data)?;
         render_value(&self.raw_template, &data)
     }
+
+    /// Get the inner [serde_json::Value] value.
+    pub fn as_json(&self) -> &serde_json::Value {
+        &self.raw_template
+    }
 }
 
 #[cfg(test)]

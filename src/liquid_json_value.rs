@@ -18,6 +18,16 @@ impl LiquidJsonValue {
     pub fn render(&self, data: &serde_json::Value) -> Result<serde_json::Value, Error> {
         self.0.render(data)
     }
+
+    /// Get the inner [LiquidJson] value.
+    pub fn inner(&self) -> &LiquidJson {
+        &self.0
+    }
+
+    /// Get the unrendered template as a [serde_json::Value].
+    pub fn as_json(&self) -> &serde_json::Value {
+        self.0.as_json()
+    }
 }
 
 impl From<serde_json::Value> for LiquidJsonValue {
