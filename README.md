@@ -44,6 +44,8 @@ This library extends the default Liquid filters with the following:
 - `json`: parses a JSON string into a Liquid object (recursing through arrays/objects as necessary).
 - `each`: apply a template over every element in an array.
 - `output`: mark a Liquid value as the output value of the template. Useful when you want to return an array or an object instead of a string.
+- `base64_encode`: encode a value to a base64 string.
+- `base64_decode`: decode a base64 value to a string. This will error if the result is not a string.
 
 ### Example
 

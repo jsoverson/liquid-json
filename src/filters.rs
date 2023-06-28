@@ -3,6 +3,11 @@ mod each;
 mod json;
 mod output;
 
+mod base64_decode;
+mod base64_encode;
+
+pub(crate) use base64_decode::Base64Decode;
+pub(crate) use base64_encode::Base64Encode;
 pub(crate) use each::Each;
 #[cfg(feature = "serde")]
 pub(crate) use json::Json;

@@ -107,7 +107,9 @@ use self::options::OptionsBuilder;
 static PARSER: Lazy<Arc<Parser>> = Lazy::new(|| {
     let builder = liquid::ParserBuilder::with_stdlib()
         .filter(filters::Each::new())
-        .filter(filters::Output);
+        .filter(filters::Output)
+        .filter(filters::Base64Decode)
+        .filter(filters::Base64Encode);
     #[cfg(feature = "serde")]
     let builder = builder.filter(filters::Json);
     Arc::new(builder.build().unwrap())
@@ -117,7 +119,9 @@ static OPTIONS: Lazy<Arc<Language>> = Lazy::new(|| {
     let builder = OptionsBuilder::new()
         .stdlib()
         .filter(filters::Each::new())
-        .filter(filters::Output);
+        .filter(filters::Output)
+        .filter(filters::Base64Decode)
+        .filter(filters::Base64Encode);
     #[cfg(feature = "serde")]
     let builder = builder.filter(filters::Json);
     builder.build()
