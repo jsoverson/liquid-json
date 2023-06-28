@@ -49,6 +49,10 @@ mod tests {
 
     #[rstest]
     #[case(json!({"this":"{{ myval }}"}), json!({"myval": 5}), json!({"this":5}))]
+    #[case(json!({"this":"{{ myval }}"}), json!({"myval": f64::MAX}), json!({"this":f64::MAX  }))]
+    #[case(json!({"this":"{{ myval }}"}), json!({"myval": i64::MAX}), json!({"this":i64::MAX}))]
+    #[case(json!({"this":"{{ myval }}"}), json!({"myval": u32::MAX}), json!({"this":u32::MAX}))]
+    // #[case(json!({"this":"{{ myval }}"}), json!({"myval": u64::MAX}), json!({"this":u64::MAX}))] // Fails for now...
     #[case(json!({"this":"{{ myval }}"}), json!({"myval": "5"}), json!({"this":"5"}))]
     #[case(json!({"this":"{{ myval }}"}), json!({"myval": 5.1}), json!({"this":5.1}))]
     #[case(json!({"this":"{{ myval }}"}), json!({"myval": [5.1,4.2]}), json!({"this":[5.1,4.2]}))]

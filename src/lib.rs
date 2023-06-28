@@ -92,6 +92,7 @@ use std::sync::Arc;
 pub use error::Error;
 use liquid::{Parser, ValueView};
 use liquid_core::{
+    model::ScalarCow,
     runtime::{RuntimeBuilder, Variable},
     Language, Runtime,
 };
@@ -142,7 +143,7 @@ fn to_liquid_obj(value: &serde_json::Value) -> Result<liquid::Object, Error> {
             .map(|(k, v)| {
                 Ok((
                     liquid::model::KString::from_string(k.clone()),
-                    to_liquid_value(v),
+                    to_liquid_value(v)?,
                 ))
             })
             .collect::<Result<liquid::Object, Error>>(),
@@ -150,34 +151,43 @@ fn to_liquid_obj(value: &serde_json::Value) -> Result<liquid::Object, Error> {
     }
 }
 
-fn to_liquid_value(value: &serde_json::Value) -> liquid::model::Value {
-    match value {
+fn to_liquid_value(value: &serde_json::Value) -> Result<liquid::model::Value, Error> {
+    Ok(match value {
         serde_json::Value::Null => liquid::model::Value::Nil,
         serde_json::Value::Bool(v) => liquid::model::Value::Scalar(liquid::model::Scalar::from(*v)),
         serde_json::Value::Number(v) => {
             if v.is_f64() {
                 liquid::model::Value::Scalar(liquid::model::Scalar::from(v.as_f64().unwrap()))
-            } else {
+            } else if v.is_i64() {
                 liquid::model::Value::Scalar(liquid::model::Scalar::from(v.as_i64().unwrap()))
+            } else {
+                let num = v.as_u64().unwrap();
+                if num < u32::MAX as u64 {
+                    liquid::model::Value::Scalar(liquid::model::Scalar::new(ScalarCow::new(
+                        v.as_u64().unwrap() as u32,
+                    )))
+                } else {
+                    return Err(Error::U64);
+                }
             }
         }
         serde_json::Value::String(v) => {
             liquid::model::Value::Scalar(liquid::model::Scalar::from(v.clone()))
         }
         serde_json::Value::Array(v) => {
-            liquid::model::Value::Array(v.iter().map(to_liquid_value).collect())
+            liquid::model::Value::Array(v.iter().map(to_liquid_value).collect::<Result<_, _>>()?)
         }
         serde_json::Value::Object(v) => liquid::model::Value::Object(
             v.into_iter()
                 .map(|(k, v)| {
-                    (
+                    Ok((
                         liquid::model::KString::from_string(k.clone()),
-                        to_liquid_value(v),
-                    )
+                        to_liquid_value(v)?,
+                    ))
                 })
-                .collect(),
+                .collect::<Result<liquid::model::Object, Error>>()?,
         ),
-    }
+    })
 }
 
 fn to_json_value(value: liquid::model::Value) -> serde_json::Value {

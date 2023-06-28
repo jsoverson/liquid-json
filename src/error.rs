@@ -7,4 +7,7 @@ pub enum Error {
     /// Passed through from the Liquid library.
     #[error(transparent)]
     LiquidError(#[from] liquid::Error),
+    /// Tried to use a u64 value in a Liquid template, which isn't supported by the Liquid library.
+    #[error("Liquid templates do not support u64 values as of right now")]
+    U64,
 }
