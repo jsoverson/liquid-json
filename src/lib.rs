@@ -201,7 +201,7 @@ fn to_json_value(value: liquid::model::Value) -> serde_json::Value {
                 "fractional number" => {
                     serde_json::Value::Number(Number::from_f64(v.to_float().unwrap()).unwrap())
                 }
-                "bool" => serde_json::Value::Bool(v.to_bool().unwrap()),
+                "boolean" => serde_json::Value::Bool(v.to_bool().unwrap()),
                 _ => panic!("Unknown scalar type: {}", name),
             }
         }
