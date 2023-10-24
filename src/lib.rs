@@ -130,9 +130,13 @@ static OPTIONS: Lazy<Arc<Language>> = Lazy::new(|| {
 
 /// Utility function to render a basic string with a [serde_json::Value] instead of dealing with [liquid::Object].
 pub fn render_string(template: &str, data: &serde_json::Value) -> Result<String, Error> {
-    let template = PARSER.parse(template)?;
     let data = to_liquid_obj(data)?;
-    Ok(template.render(&data)?)
+    inner_render_string(template, &data)
+}
+
+fn inner_render_string(template: &str, data: &liquid::Object) -> Result<String, Error> {
+    let template = PARSER.parse(template)?;
+    Ok(template.render(data)?)
 }
 
 fn to_liquid_obj(value: &serde_json::Value) -> Result<liquid::Object, Error> {
@@ -258,7 +262,7 @@ fn render_value(
         serde_json::Value::Object(o) => {
             let map = o
                 .into_iter()
-                .map(|(k, v)| Ok((k.clone(), render_value(v, data)?)))
+                .map(|(k, v)| Ok((inner_render_string(k, data)?, render_value(v, data)?)))
                 .collect::<Result<serde_json::Map<String, serde_json::Value>, Error>>()?;
             Ok(serde_json::Value::Object(map))
         }
